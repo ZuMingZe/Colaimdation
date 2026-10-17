@@ -4,18 +4,12 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
 jobs:
   windows-build:
     runs-on: windows-latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
-      - name: Setup CMake
-        uses: actions/setup-cmake@v4
-        with:
-          cmake-version: '3.29'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
