@@ -381,3 +381,387 @@ Document（Patch 校验、重叠拒绝、UTF-8 安全、撤销/重做/回滚）�
 项目自身尚未声明许可（见 `LICENSE`）。第三方组件许可见各包目录下的 `LICENSE`
 （Mermaid MIT、KaTeX MIT、highlight.js BSD-3-Clause、WebView2 SDK 微软许可），
 具体版本记录在 `third_party/vendor/VERSIONS.json`。
+
+
+# Colaimdation
+
+> A local Markdown editor with **in-place real-time rendering**, with a built-in **MCP Server**.
+> Any external Agent that supports MCP (OpenClaw / DeepSeek Harness / WorkBuddy, etc.) can connect
+> and collaborate with you on the **document in the editor's memory**, rather than bypassing the editor to read and write disk files directly.
+
+C++20 / Win32 / WebView2, no third-party runtime dependencies (Mermaid, KaTeX, highlight.js are bundled into `third_party/vendor`).
+
+---
+
+## What Is This
+
+| | Traditional Approach | Colaimdation |
+|---|---|---|
+| The document the Agent sees | A file on disk | The document **in the editor's memory** (including your unsaved changes) |
+| How the Agent modifies the document | Rewrites the whole file | **Incremental Patch** (by byte offset / by block id) |
+| Your input | Overwritten / conflicted | Never lost: conflicts become explicit errors |
+| The Agent's changes | Happen silently | Real-time rendering + audit log + one-click rollback |
+| Each Agent | Needs its own adapter | Unified MCP protocol, one integration works for all |
+| Access scope | The entire file system | **Only the currently open document** (with multiple tabs, the active tab) |
+
+## Features
+
+### Basic Editing Capabilities
+- Open / save local `.md` files (automatically detects and preserves the original CRLF/LF line endings, supports UTF-8 BOM and GBK fallback)
+- **Open multiple documents at once**: one tab per file, with an unsaved marker on the tab; click a tab to switch (`Ctrl+Tab` /
+  `Ctrl+Shift+Tab`), `Ctrl+W` to close; each document keeps its own cursor, undo history, and line-ending style.
+  Closing an unsaved tab asks you whether to save first. The Agent always acts only on **the currently active one**
+- **Formatting without knowing Markdown**: the second row of the toolbar is a formatting bar; click a button to insert a heading, list
+  (Enter automatically continues the list), task list, blockquote, code block, horizontal rule, table (add rows/columns),
+  as well as bold, italic, inline code, links, images, and formulas — the editor writes the syntax, you just write the words
+- **Mouse selection / copy-paste**: drag-select, double-click to select a word, `Ctrl+A` select all, `Ctrl+C/X/V` copy/cut/paste all work;
+  code boxes are real text boxes (click anywhere to place the cursor, drag-select inside the box); `Ctrl+A` inside a code box selects the code in the box,
+  while in the body it selects the whole document (including blocks rendered as HTML)
+- **In-place real-time WYSIWYG**: the line the cursor is on shows Markdown source, the rest is rendered in real time
+- **Edit code blocks in code boxes**: type ` ```lang ` and press Enter, and the block immediately becomes a code box with a language label;
+  write code directly in the box (it grows automatically, the surrounding lines are maintained by the editor, and the closing fence is added automatically);
+  when the cursor is on the fence line it is still source, and clicking the title bar switches the whole block back to source to change the language
+- **Auto-indent + syntax highlighting in code boxes**: Enter keeps the current line's indentation; when the line ends with `{`, `[`, `(`, or `:`,
+  it indents one more level; typing `}`/`)`/`]` at the start of a line dedents one level first; `Tab` / `Shift+Tab` increase/decrease one level
+  (`json`/`js`/`html`, etc. use two spaces, others use four spaces; if multiple lines are selected, the whole block moves together),
+  and the code is highlighted while you write — the colors are drawn on a layer beneath the text box, so the cursor, selection, and IME are unaffected
+- Supports Mermaid flowcharts/sequence diagrams, KaTeX inline and block formulas, tables, task lists, and code highlighting
+- **Printing and export are both in the "File" menu**: `Print` (`Ctrl+P`) prints only the document itself — the toolbar, tabs,
+  status bar, and sidebar do not appear; the editor no longer prints only one screen (the scroll container and fixed height are removed in the print styles);
+  the block where the cursor is located is printed as rendered, without printing Markdown markers; the paper is always light-colored, so a dark theme won't print a black page.
+  There is also `Export as PDF`, `Export as Word`, and `Export as Image`: PDF is generated directly by WebView2; the image is a single PNG of the whole document
+  (at content height, 1.5× resolution); Word is a real `.docx` (headings/paragraphs/bold-italic/inline code/
+  links/lists/quotes/code blocks/tables/horizontal rules; formulas are shown as LaTeX source, images as placeholder text)
+- **Links won't take over the editor**: links in the document (including `target="_blank"`) are always opened in the **system default browser**;
+  the editor's page itself cannot be navigated away — there is no back button in WebView2, and once navigated away the whole UI is gone.
+  Relative links pointing to local files (such as `other.md`) are not loaded: that address exists only inside the window; clicking it does nothing,
+  and will never turn the window into the browser's "file not found" page; if the frontend really fails to load, the program automatically reloads the UI,
+  and you can also use View → "Reload Frontend" / `F5` at any time to return to the editor
+- Standard editing operations: insert/delete text, selection, cursor management; `Ctrl+Z` / `Ctrl+Y` undo/redo; document snapshots and history
+- `Ctrl+/` toggles whole-document source mode (handier for large files or precise editing)
+
+### Multilingual UI
+Built-in **English / Simplified Chinese / Japanese** UI languages; menus, dialogs, window titles, status bar,
+Agent panel, audit panel, Diff panel, and notification messages all switch accordingly.
+
+- The language button (globe icon) at the top right of the toolbar switches at any time; **the UI updates immediately, no restart needed**
+- The menu **View → Language** can also switch (the current language has a radio mark)
+- On first launch it **follows the OS language**; after a manual choice it is remembered and used on the next launch
+- The command line `--lang en|zh-Hans|ja` can temporarily override it (also accepts tags like `zh-CN`, `ja-JP`)
+- The choice is persisted in `%LOCALAPPDATA%\colaimdation\settings.json`
+- Command-line help text (`--help`) also switches with `--lang`
+
+### Appearance (Light / Dark)
+- The **appearance button** (half-circle icon) on the toolbar switches between Light / Dark / Follow System, **effective immediately**
+- "Follow System" reads the OS's current light/dark preference and follows automatically when the system switches
+- All surfaces inside the window (toolbar, tabs, panels, code highlighting, Mermaid diagrams, scrollbars, and form controls)
+  follow the theme
+- The choice is persisted in `settings.json` and used on the next launch; the command line `--theme light|dark|auto` can temporarily override it
+- After `F5` reloads the frontend, the current appearance and language are still preserved (startup information is re-read every time, not cached at startup)
+
+The **names, parameters, and descriptions of MCP tools remain in English**: that is the protocol interface facing Agents, and translating them would reduce
+predictability. The UI language only affects the text humans see.
+
+### Agent Collaboration Core Capabilities
+1. **Built-in MCP Server in the editor**
+   - HTTP: `http://127.0.0.1:<port>/mcp` (listens only on the loopback address)
+   - stdio: `colaimdation_mcp_bridge.exe` (for hosts that can only launch processes)
+   - No need to develop a separate adapter for any Agent
+2. **The Agent does not read or write disk files directly**; it operates on the document in the editor's memory through MCP tools:
+   - Read: document info, full text/range, block structure, outline, cursor selection, search
+   - Write: incremental Patch (insert / replace range / replace block / insert block / append section / replace whole document)
+   - Save: `colaimdation_save_document` (the only tool that touches disk, and it can only write the current document)
+3. **Two-way awareness**
+   - Agent → you: changes render immediately and the source block is highlighted
+   - You → Agent: `colaimdation_get_user_changes` / `notifications/resources/updated` let the Agent perceive your writing progress
+4. **Security controls**
+   - Local Token authentication (256-bit, bound only to 127.0.0.1)
+   - Optional **Diff preview confirmation**: the Agent's changes first show you the difference, and only take effect after confirmation
+   - **Audit log** (in memory + JSONL on disk) + **one-click rollback**
+   - **Permission isolation**: can only operate on the currently open document, cannot access other files on the machine
+
+## Quick Start
+
+### Requirements
+- Windows 10/11
+- Visual Studio 2022 (with C++ toolset)
+- CMake 3.24+ and Ninja
+- Microsoft Edge WebView2 Runtime (usually preinstalled on Win10/11)
+
+### Build
+
+```powershell
+# 1) Fetch the WebView2 SDK into third_party/ (needed the first time, can be skipped afterwards)
+powershell -File tools/fetch_webview2.ps1
+
+# 2) Build (the script imports the vcvars64 environment itself; no developer command prompt needed)
+powershell -File tools/build.ps1
+
+# 2b) Want only a build for end users: without "Developer Tools / Editor Self-Check"; output in build-user\bin
+powershell -File tools/build.ps1 -User
+
+# 3) Run tests
+powershell -File tools/build.ps1 -Test
+```
+
+The script is compatible with both PowerShell 7 (`pwsh`) and Windows PowerShell 5.1 (`powershell`).
+
+> **When the project path contains non-ASCII characters (e.g., a Chinese directory)**, `tools/build.ps1` automatically maps a drive letter
+> (`X:`, `Y:`…) to the project root and uses it to invoke CMake/Ninja. The reason is specific: on this machine,
+> Ninja records header dependencies using ANSI paths; a Chinese directory causes garbled paths in `.ninja_deps`, and the next
+> build directly reports `FindFirstFileExA(...): The filename ... is incorrect`, and before that the header
+> dependencies have already silently failed (changing a `.h` without recompiling, linking to object files with the old layout, manifesting as crashes or heap corruption).
+> The output still lands in `<project>\build-core\bin`, because it maps the same directory. Therefore **under such paths, use the script
+> to build**, not the bare CMake commands below.
+
+Output is in `build-core/bin/`:
+
+| File | Description |
+|---|---|
+| `colaimdation.exe` | Editor (Win32 + WebView2 shell, includes MCP Server) |
+| `colaimdation_mcp_bridge.exe` | MCP stdio bridge (forwards stdio to the running editor) |
+| `colaimdation_tests.exe` | Unit and end-to-end tests (190+) |
+| `web/` | Editor frontend and bundled rendering libraries |
+
+The **user build** (`tools/build.ps1 -User`, output in `build-user/bin/`) differs from the dev build only in that:
+the menu has no **View → Developer Tools** (F12 no longer opens DevTools) and no **View → Editor Self-Check**;
+all other features are identical. Use it when releasing to non-developers.
+
+### Icon
+
+The program icon is in `ico/`: `无标题.png` is the original image, `colaimdation.ico` is the multi-size icon compiled into `colaimdation.exe` /
+`colaimdation_mcp_bridge.exe` (16/24/32/48/64/128/256, so Explorer, taskbar, Alt+Tab, and title bar each get what they need, without stretching one image). To change the icon, just replace the PNG in `ico/` and run:
+
+```powershell
+python tools/make_icon.py        # can also specify explicitly: make_icon.py source.png output.ico
+powershell -File tools/build.ps1 # the icon is compiled into the executable by src/app/app_icon.rc
+```
+
+When all paths are ASCII, you can also use standard CMake:
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+### Run
+
+```powershell
+# Open the welcome document
+build-core\bin\colaimdation.exe --demo
+
+# Open a file
+build-core\bin\colaimdation.exe notes.md
+
+# Fixed port + require confirmation for every change
+build-core\bin\colaimdation.exe --port 41777 --confirm notes.md
+
+# One command does it all: build → launch → health check → call a tool → exit
+powershell -File tools/run.ps1 -Smoke
+```
+
+After startup, the endpoint and Token are written to `%LOCALAPPDATA%\colaimdation\mcp.json`,
+and can also be copied from the menu **Agent → Copy endpoint and token**.
+
+### Make the Endpoint Fixed (No Need to Send It to the AI Again After Restart)
+
+By default, **the port is remembered**: the first launch picks any free port, and it is fixed thereafter,
+so the address `http://127.0.0.1:<port>/mcp` no longer changes. The Token is regenerated on each launch by default;
+if you want the **complete endpoint with token** in your Agent configuration to remain valid:
+
+- Open the Agent panel → check **Use the same token after restart** (written to `settings.json`);
+  this token will then be used until you click **Regenerate token**
+- The **MCP Port** field can be set to a fixed port (0 = automatically pick one and remember it); if occupied by another program, it automatically
+  falls back to a random port and shows a notice in the panel, without writing the port number back
+
+You can also edit `%LOCALAPPDATA%\colaimdation\settings.json` directly:
+
+```jsonc
+{
+  "mcp_port": 41777,          // 0 = automatically pick one and remember it
+  "mcp_token": "……64 hex digits……"  // empty = regenerate on each launch
+}
+```
+
+The command line `--port` / `--token` still only apply to the current run and do not overwrite the preferences above.
+
+## Connect Your Agent
+
+### MCP HTTP
+
+```jsonc
+{
+  "mcpServers": {
+    "colaimdation": {
+      "url": "http://127.0.0.1:41777/mcp",
+      "headers": { "Authorization": "Bearer <token generated at startup>" }
+    }
+  }
+}
+```
+
+Missing or incorrect Token always returns `401`; `/health` requires no Token, for liveness checks.
+
+### MCP stdio
+
+When the host can only launch a child process, use the bridge program; it automatically reads `mcp.json` and forwards stdio to the running editor:
+
+```jsonc
+{
+  "mcpServers": {
+    "colaimdation": {
+      "command": "E:\\path\\to\\colaimdation_mcp_bridge.exe",
+      "args": []
+    }
+  }
+}
+```
+
+You can also specify explicitly: `colaimdation_mcp_bridge.exe --port 41777 --token <token>`.
+
+### A Typical Collaboration
+
+```
+Agent → colaimdation_get_document_info        See what document this is
+Agent → colaimdation_get_structure            Get block ids (b0, b1, …)
+Agent → colaimdation_get_selection            Where you are working
+Agent → colaimdation_apply_patch              expected_revision + replace_block(b7, ...)
+      ← { status: "applied", revision_after, diff }
+User  ← The editor refreshes in real time and highlights the changed block
+User  manually continues editing → the Agent perceives it with get_user_changes
+```
+
+For the tool list and parameters, see **[docs/MCP.md](docs/MCP.md)**; for design tradeoffs, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+## Security Model
+
+- **Binding**: MCP HTTP only `bind(127.0.0.1)`, unreachable from the LAN; it also validates that the `Host` header must be a loopback address.
+- **Authentication**: by default requires `Authorization: Bearer <token>` (also supports `?token=`, `X-Colaimdation-Token`, Basic).
+  The Token is generated by the system CSPRNG with 32 bytes, and comparison uses a constant-time implementation.
+- **Permission isolation**: there is no tool to "open another file". All reads and writes are on the current document;
+  `allowed_directory` can further restrict the save path.
+- **Human fallback**: when `require_confirmation=true`, the Agent's write is first trial-computed on a **copy** of the `Document` and a diff is generated;
+  only when you click "Apply change" in the Diff panel does it actually take effect; rejection is returned to the Agent as `rejected_by_user`.
+- **Traceability**: every change goes into the audit log (who, which tool, which session, bytes added/removed, optional unified diff).
+  `colaimdation_rollback` can roll back the last Agent change, roll back to a certain revision,
+  or roll back all changes after a certain sequence number. Rollback itself is also an audited edit.
+- **Limits**: single patch bytes, single patch count, read limit, and session TTL can all be adjusted in
+  `colaimdation_set_policy` or the `--config` JSON.
+
+## Command Line
+
+| Parameter | Description |
+|---|---|
+| `--file <path>` | Open the specified document (a path can also be written directly) |
+| `--port <n>` | Fixed MCP port (by default assigned by the system, then the previous port is reused) |
+| `--token <value>` | Specify the MCP Token (randomly generated by default; `mcp_token` in `settings.json` can fix it long-term) |
+| `--config <path>` | Read security policy overrides from JSON |
+| `--read-only` | Prohibit Agent writes |
+| `--confirm` | Require Diff confirmation for every Agent change |
+| `--allow-dir <path>` | Restrict the file access directory |
+| `--demo` / `--no-demo` | Whether to open the welcome document (default: open) |
+| `--theme <auto\|light\|dark>` / `--font-size <pt>` | Appearance |
+| `--lang <en\|zh-Hans\|ja>` | UI language (tags like `zh-CN`, `ja-JP` are accepted) |
+| `--no-webview` | Do not initialize the frontend (for diagnostics) |
+| `--log` | Write the audit log to the program directory |
+| `--help` | Help (follows `--lang`) |
+
+Example `--config` file:
+
+```json
+{
+  "require_confirmation": true,
+  "protect_front_matter": true,
+  "allowed_directory": "C:\\notes",
+  "max_patch_bytes": 65536,
+  "allowed_line_ranges": [[1, 200]]
+}
+```
+
+## Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+N` / `Ctrl+O` / `Ctrl+S` | New (new tab) / Open (new tab) / Save |
+| `Ctrl+Shift+S` | Save As |
+| `Ctrl+W` | Close the current tab |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous document |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Ctrl+A` / `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Select all / copy / cut / paste (inside a code box, applies to the code in the box) |
+| `Ctrl+Shift+Z` | Roll back the last Agent change |
+| `Ctrl+/` | Toggle source mode |
+| `Ctrl+Shift+A` / `Ctrl+Shift+L` | Agent panel / audit panel |
+| `F5` / `F12` | Reload frontend / developer tools |
+| Toolbar globe icon | Switch UI language (English / Simplified Chinese / Japanese) |
+
+## Directory Structure
+
+```
+CMakeLists.txt              Build definition (core static library + editor + bridge + tests)
+ico/                        Program icon: original PNG + multi-size colaimdation.ico (generated by tools/make_icon.py)
+src/core/                   Document engine: UTF-8, JSON, Markdown AST, Patch, audit, policy, i18n, settings
+src/mcp/                    MCP: JSON-RPC dispatch, HTTP service, stdio bridge, 22 tools
+src/app/                    Win32/WebView2 shell, editor window, message bridge, command line, entry point
+web/                        Editor frontend (in-place rendering, Agent panel, Diff panel, audit panel)
+web/assets/lang/            Frontend language packs (en / zh-Hans / ja, shipped with the product)
+third_party/webview2/       WebView2 SDK (fetched by tools/fetch_webview2.ps1)
+third_party/vendor/         Mermaid / KaTeX / highlight.js (bundled offline)
+tests/                      197 tests: unit + real HTTP end-to-end + multilingual completeness + tabs
+tools/                      Build, run, dependency fetch scripts + frontend Node checks (including web_format.js)
+docs/                       MCP tool reference, architecture notes
+```
+
+## Adding a New Language
+
+1. Add one column per language to the `kRows` table in `src/core/i18n.cpp` (the table structure is
+   "one row per string, one column per language"; missing translations are caught directly by tests).
+2. Add a frontend language pack to `PACKS` in `web/assets/i18n.js`, and place a JSON file with the same name in `web/assets/lang/`
+   (for translation and proofreading).
+3. Register the tag and local name in `i18n::languages()` and the frontend `LANGUAGES`.
+4. `build-core\bin\colaimdation_tests.exe --filter=i18n` verifies:
+   - Every key in every language is translated (non-empty)
+   - Menu shortcut hints (`Ctrl+S`, etc.) and `&` access keys still exist after translation
+   - Placeholder `{0}` counts and replacements are correct
+   - The key sets of each frontend language pack and the runtime bundle are complete
+   - The Chinese and Japanese language packs really contain CJK text and differ from each other
+
+## Testing
+
+```powershell
+build-core\bin\colaimdation_tests.exe                 # All
+build-core\bin\colaimdation_tests.exe --filter=mcp    # Only MCP end-to-end
+ctest --test-dir build-core --output-on-failure       # Run by group
+```
+
+Coverage: JSON (including surrogate pairs, depth limits), UTF-8 (including invalid sequences, boundary alignment),
+Markdown parsing (block structure, table alignment, list nesting, inline markup),
+Document (Patch validation, overlap rejection, UTF-8 safety, undo/redo/rollback), Diff,
+audit log persistence, security policy, Workspace (confirmation flow, permission interception, file read/write,
+**opening/switching/closing multiple tabs and saving each tab separately**),
+command-line parsing, multilingual (catalog completeness, placeholders, access keys, frontend language packs, settings persistence),
+and **MCP end-to-end over real loopback HTTP**
+(authentication, tool calls, concurrent conflicts, resource reads, notifications, file discovery).
+
+The frontend also has three sets of Node checks (automatically skipped when no headless browser is found):
+`tools/web_probe.js`, `tools/web_typing.js`, `tools/web_format.js`
+(the last is the formatting toolbar: the Markdown written by each button, cursor landing position, adding table rows/columns,
+selection wrapping). The menu **View → Check Editor** runs the same set of engine self-checks in the actually running WebView2
+and displays the report directly.
+
+## Known Boundaries
+
+- Windows only (Win32 + WebView2).
+- The Markdown parser is a self-developed line-level CommonMark subset, covering headings, paragraphs, fenced/indented code, blockquotes,
+  lists, tables, horizontal rules, HTML blocks, block formulas, and front matter; it does not do full CommonMark compliance
+  (does not handle reference links, inline HTML nesting, etc.).
+- The editing model is "block-level content editable": the block where the cursor is located shows source. Within the same block you can edit freely;
+  cross-block structural operations trigger re-parsing and DOM reordering, and the cursor position is preserved,
+  but the experience in extremely nested scenarios is not as refined as a dedicated editor (such as CodeMirror).
+- Three-way merge is not implemented: concurrent editing uses an "optimistic concurrency + revision conflict error" strategy.
+
+## License
+
+The project itself has not yet declared a license (see `LICENSE`). Third-party component licenses are in each package directory's `LICENSE`
+(Mermaid MIT, KaTeX MIT, highlight.js BSD-3-Clause, WebView2 SDK Microsoft license);
+specific versions are recorded in `third_party/vendor/VERSIONS.json`.
