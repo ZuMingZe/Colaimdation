@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Local app: no remote requests, no remote fonts, no telemetry. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Colaimdation</title>
+<link rel="stylesheet" href="vendor/hljs/github.min.css" id="hljs-light">
+<link rel="stylesheet" href="vendor/hljs/github-dark.min.css" id="hljs-dark" disabled>
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="toolbar">
+    <div class="tb-group tb-brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span class="brand-name">Colaimdation</span>
+    </div>
+
+    <div class="tb-group">
+      <button id="btn-new" class="tb-btn" data-i18n="toolbar.new" data-i18n-title="title.new">New</button>
+      <button id="btn-open" class="tb-btn" data-i18n="toolbar.open" data-i18n-title="title.open">Open</button>
+      <button id="btn-save" class="tb-btn" data-i18n="toolbar.save" data-i18n-title="title.save">Save</button>
+      <button id="btn-save-as" class="tb-btn" data-i18n="toolbar.saveAs" data-i18n-title="title.saveAs">Save as</button>
+    </div>
+
+    <div class="tb-group">
+      <button id="btn-undo" class="tb-btn" data-i18n="toolbar.undo" data-i18n-title="title.undo" disabled>Undo</button>
+      <button id="btn-redo" class="tb-btn" data-i18n="toolbar.redo" data-i18n-title="title.redo" disabled>Redo</button>
+    </div>
+
+    <div class="tb-group">
+      <button id="btn-source" class="tb-btn tb-toggle" data-i18n="toolbar.source" data-i18n-title="title.source">Source</button>
+      <button id="btn-agent" class="tb-btn tb-toggle" data-i18n="toolbar.agent" data-i18n-title="title.agent">Agent</button>
+      <button id="btn-audit" class="tb-btn tb-toggle" data-i18n="toolbar.audit" data-i18n-title="title.audit">Audit</button>
+    </div>
+
+    <div class="tb-spacer"></div>
+
+    <div class="tb-group tb-status-inline">
+      <button id="btn-theme" class="tb-btn tb-lang" data-i18n-title="toolbar.theme"
+              title="Appearance" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M8 1.2a6.8 6.8 0 1 0 0 13.6A6.8 6.8 0 0 0 8 1.2Zm0 1.4v10.8a5.4 5.4 0 0 1 0-10.8Z"/>
+        </svg>
+        <span id="btn-theme-label">Auto</span>
+      </button>
+      <button id="btn-lang" class="tb-btn tb-lang" data-i18n-title="toolbar.language"
+              title="Language" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm5.2 4.6h-1.9a12 12 0 0 0-.9-2.3 5.6 5.6 0 0 1 2.8 2.3ZM8 2.5c.6.8 1.1 1.9 1.4 3.1H6.6C6.9 4.4 7.4 3.3 8 2.5ZM2.5 8c0-.6.1-1.2.3-1.8h2.2a14 14 0 0 0 0 3.6H2.8A5.5 5.5 0 0 1 2.5 8Zm.8 3.2h1.9c.2.8.5 1.6.9 2.3a5.6 5.6 0 0 1-2.8-2.3ZM5.1 4.6H3.3a5.6 5.6 0 0 1 2.8-2.3 12 12 0 0 0-.9 2.3H5.1Zm.6 1.5h4.6a12.4 12.4 0 0 1 0 3.8H5.7a12.4 12.4 0 0 1 0-3.8Zm.6 6.6c.3-.7.6-1.5.8-2.3h1.9c.2.8.5 1.6.9 2.3a5.6 5.6 0 0 1-3.6 0Zm4.2-.6c.4-.7.7-1.5.9-2.3h1.9a5.6 5.6 0 0 1-2.8 2.3Zm1.1-3.8a14 14 0 0 0 0-3.6h2.2a5.5 5.5 0 0 1 0 3.6h-2.2Z"/>
+        </svg>
+        <span id="btn-lang-label">EN</span>
+      </button>
+      <span id="mcp-badge" class="mcp-badge" data-i18n-title="title.mcpBadge" title="MCP server status">
+        <span class="mcp-dot"></span><span id="mcp-badge-text" data-i18n="mcp.badge">MCP</span>
+      </span>
+      <button id="btn-endpoint" class="tb-btn tb-ghost" data-i18n="toolbar.copyEndpoint"
+              data-i18n-title="title.copyEndpoint">Copy endpoint</button>
+    </div>
+  </header>
+
+  <!-- Markdown-free formatting: every button writes the syntax for the writer, so
+       nobody has to know what "#" or "| --- |" means. -->
+  <div id="formatbar" class="formatbar">
+    <div class="fb-group">
+      <button class="fb-btn" data-format="paragraph" data-i18n="format.paragraphShort"
+              data-i18n-title="format.paragraph" title="New paragraph">&#182;</button>
+      <button class="fb-btn" data-format="heading1" data-i18n-title="format.h1" title="Heading 1">H1</button>
+      <button class="fb-btn" data-format="heading2" data-i18n-title="format.h2" title="Heading 2">H2</button>
+      <button class="fb-btn" data-format="heading3" data-i18n-title="format.h3" title="Heading 3">H3</button>
+    </div>
+    <span class="fb-sep"></span>
+    <div class="fb-group">
+      <button class="fb-btn" data-format="bullet" data-i18n-title="format.bullet" title="Bullet list">&#8226;</button>
+      <button class="fb-btn" data-format="number" data-i18n-title="format.number" title="Numbered list">1.</button>
+      <button class="fb-btn" data-format="task" data-i18n-title="format.task" title="Task list">&#9744;</button>
+      <button class="fb-btn" data-format="quote" data-i18n-title="format.quote" title="Quote">&#10078;</button>
+      <button class="fb-btn fb-mono" data-format="code" data-i18n-title="format.code" title="Code block">{&nbsp;}</button>
+      <button class="fb-btn" data-format="divider" data-i18n-title="format.divider" title="Divider">&#8213;</button>
+    </div>
+    <span class="fb-sep"></span>
+    <div class="fb-group">
+      <button class="fb-btn" data-format="table" data-i18n-title="format.table" title="Insert a table">&#8862;</button>
+      <button class="fb-btn" data-format="table-row" data-i18n="format.rowShort"
+              data-i18n-title="format.row" title="Add a row">Row&nbsp;+</button>
+      <button class="fb-btn" data-format="table-column" data-i18n="format.columnShort"
+              data-i18n-title="format.column" title="Add a column">Col&nbsp;+</button>
+    </div>
+    <span class="fb-sep"></span>
+    <div class="fb-group">
+      <button class="fb-btn fb-bold" data-format="bold" data-i18n-title="format.bold" title="Bold">B</button>
+      <button class="fb-btn fb-italic" data-format="italic" data-i18n-title="format.italic" title="Italic">I</button>
+      <button class="fb-btn fb-mono" data-format="inlineCode" data-i18n-title="format.inlineCode"
+              title="Inline code">&#8249;c&#8250;</button>
+      <button class="fb-btn" data-format="link" data-i18n="format.linkShort"
+              data-i18n-title="format.link" title="Link">Link</button>
+      <button class="fb-btn" data-format="image" data-i18n="format.imageShort"
+              data-i18n-title="format.image" title="Image">Image</button>
+      <button class="fb-btn" data-format="formula" data-i18n="format.formulaShort"
+              data-i18n-title="format.formula" title="Formula">&#8721;</button>
+    </div>
+  </div>
+
+  <!-- One tab per open document. Built by app.js from the host's tab list. -->
+  <div id="tabbar" class="tabbar" role="tablist" data-i18n-aria-label="tab.list"
+       aria-label="Open documents"></div>
+
+  <main id="workspace">
+    <section id="editor-pane">
+      <div id="pending-banner" class="pending-banner" hidden>
+        <span id="pending-text"></span>
+        <span class="tb-spacer"></span>
+        <button id="btn-review" class="tb-btn tb-accent" data-i18n="diff.review">Review diff</button>
+      </div>
+      <div id="editor-scroll">
+        <div id="editor" contenteditable="true" spellcheck="false" role="textbox"
+             aria-multiline="true" data-i18n-aria-label="title.editor"
+             aria-label="Markdown document"></div>
+      </div>
+      <textarea id="source-view" spellcheck="false" hidden
+                data-i18n-aria-label="title.sourceView" aria-label="Markdown source"></textarea>
+    </section>
+
+    <aside id="side-panel" hidden>
+      <div class="panel-tabs" role="tablist" data-i18n-aria-label="panel.tabs">
+        <button class="panel-tab" data-tab="agent" data-i18n="panel.agent">Agent</button>
+        <button class="panel-tab" data-tab="audit" data-i18n="panel.audit">Audit</button>
+        <button class="panel-tab" data-tab="preview" data-i18n="panel.diff">Diff</button>
+        <span class="tb-spacer"></span>
+        <button id="panel-close" class="tb-btn tb-ghost" data-i18n-title="panel.close"
+                data-i18n-aria-label="panel.close" title="Close panel">&times;</button>
+      </div>
+
+      <div class="panel-body" id="tab-agent">
+        <div class="panel-section">
+          <h3 data-i18n="agent.connection">Connection</h3>
+          <p class="hint" data-i18n="agent.connectionHint"></p>
+          <label class="field">
+            <span data-i18n="agent.endpointLabel"></span>
+            <div class="row">
+              <input id="endpoint-input" type="text" readonly>
+              <button id="btn-copy-endpoint" class="tb-btn" data-i18n="agent.copy">Copy</button>
+            </div>
+          </label>
+          <label class="field">
+            <span data-i18n="agent.bridgeLabel"></span>
+            <div class="row">
+              <input id="bridge-input" type="text" readonly>
+              <button id="btn-copy-bridge" class="tb-btn" data-i18n="agent.copy">Copy</button>
+            </div>
+          </label>
+          <!-- Pin the endpoint so an Agent configured once keeps working after a
+               restart: the port is remembered automatically, the token only when
+               the writer asks for it. -->
+          <label class="field">
+            <span data-i18n="agent.portLabel"></span>
+            <div class="row">
+              <input id="mcp-port-input" type="number" min="0" max="65535" step="1"
+                     data-i18n-title="agent.portTitle" title="0 = pick a free port">
+              <button id="btn-mcp-port" class="tb-btn" data-i18n="agent.portSave">Save</button>
+            </div>
+          </label>
+          <label class="check"><input type="checkbox" id="mcp-keep-token"><span
+            data-i18n="agent.keepToken"></span></label>
+          <div class="row">
+            <button id="btn-mcp-new-token" class="tb-btn tb-ghost"
+                    data-i18n="agent.newToken">New token</button>
+          </div>
+          <p class="hint" id="agent-endpoint-hint"></p>
+          <div class="kv">
+            <div><dt data-i18n="agent.statTools"></dt><dd id="stat-tools">-</dd></div>
+            <div><dt data-i18n="agent.statRequests"></dt><dd id="stat-requests">-</dd></div>
+            <div><dt data-i18n="agent.statCalls"></dt><dd id="stat-calls">-</dd></div>
+            <div><dt data-i18n="agent.statSessions"></dt><dd id="stat-sessions">-</dd></div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <h3 data-i18n="agent.permissions">Permissions</h3>
+          <label class="check"><input type="checkbox" id="policy-write"><span data-i18n="agent.allowWrite"></span></label>
+          <label class="check"><input type="checkbox" id="policy-confirm"><span data-i18n="agent.requireConfirmation"></span></label>
+          <label class="check"><input type="checkbox" id="policy-frontmatter"><span data-i18n="agent.protectFrontMatter"></span></label>
+          <label class="check"><input type="checkbox" id="policy-save"><span data-i18n="agent.allowSave"></span></label>
+          <label class="check"><input type="checkbox" id="policy-rollback"><span data-i18n="agent.allowRollback"></span></label>
+          <label class="check"><input type="checkbox" id="policy-caret"><span data-i18n="agent.allowCaret"></span></label>
+          <label class="field">
+            <span data-i18n="agent.allowedDirectory"></span>
+            <input id="policy-directory" type="text" placeholder="C:\notes">
+          </label>
+        </div>
+
+        <div class="panel-section">
+          <h3 data-i18n="agent.activity">Activity</h3>
+          <ul id="activity-list" class="activity"></ul>
+        </div>
+      </div>
+
+      <div class="panel-body" id="tab-audit" hidden>
+        <div class="panel-section">
+          <div class="row">
+            <button id="btn-audit-refresh" class="tb-btn" data-i18n="audit.refresh">Refresh</button>
+            <button id="btn-rollback-last" class="tb-btn" data-i18n="audit.rollbackLast">Rollback last agent change</button>
+          </div>
+          <p class="hint" data-i18n="audit.hint"></p>
+          <div id="audit-list" class="audit"></div>
+        </div>
+      </div>
+
+      <div class="panel-body" id="tab-preview" hidden>
+        <div class="panel-section">
+          <h3 id="preview-title" data-i18n="diff.title">Proposed change</h3>
+          <p class="hint" id="preview-meta"></p>
+          <div id="diff-view" class="diff"></div>
+          <div class="row row-actions">
+            <button id="btn-accept-change" class="tb-btn tb-accent" data-i18n="diff.apply">Apply change</button>
+            <button id="btn-reject-change" class="tb-btn" data-i18n="diff.reject">Reject</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer id="statusbar">
+    <span id="status-path" data-i18n-title="status.documentPath" title="Document path">untitled.md</span>
+    <span class="sep">&#183;</span>
+    <span id="status-revision" data-i18n-title="status.revision" title="Document revision">rev -</span>
+    <span class="tb-spacer"></span>
+    <span id="status-selection" data-i18n-title="status.caretTitle" title="Caret line and column"></span>
+    <span class="sep">&#183;</span>
+    <span id="status-counts" data-i18n-title="status.countsTitle" title="Word, character and block counts"></span>
+    <span class="sep">&#183;</span>
+    <span id="status-dirty" class="dirty-badge" data-i18n="status.unsaved" hidden>unsaved</span>
+    <span id="status-mode" class="mode-badge" data-i18n-title="status.modeTitle" title="Current mode">WYSIWYG</span>
+  </footer>
+</div>
+
+<div id="toast-stack" aria-live="polite"></div>
+
+<script src="assets/i18n.js"></script>
+<script src="vendor/katex/katex.min.js"></script>
+<script src="vendor/katex/contrib/auto-render.min.js"></script>
+<script src="vendor/hljs/highlight.min.js"></script>
+<script src="vendor/mermaid/mermaid.min.js"></script>
+<script src="assets/render.js"></script>
+<script src="assets/editor.js"></script>
+<script src="assets/panels.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

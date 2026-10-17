@@ -1,0 +1,28 @@
+# build output
+build/
+build-*/
+cmake-build-*/
+
+# local scratch
+.scratch/
+.probe/
+
+# editor / tooling noise
+.vs/
+.vscode/
+*.user
+*.ilk
+*.pdb
+*.obj
+*.exe
+*.dll
+*.lib
+compile_commands.json
+
+# fetched third-party sources (re-create with tools/fetch_webview2.ps1)
+third_party/webview2/
+third_party/*.nupkg
+
+# runtime state
+*.audit.jsonl
+colaimdation-audit.jsonl

@@ -1,0 +1,30 @@
+colaimdation
+===========
+
+A local WYSIWYG Markdown editor with an embedded MCP server, written in C++20
+for Windows (Win32 + WebView2).
+
+Licensing status
+----------------
+
+This repository is a self-contained application sample. No license has been
+declared for the colaimdation source itself; treat it as "all rights reserved"
+until the owner states otherwise.
+
+Third-party components bundled under third_party/ keep their own licenses and
+are redistributed unmodified:
+
+  * Microsoft.Web.WebView2 SDK ....... Microsoft Software License Terms
+                                       (see third_party/webview2/ after
+                                        tools/fetch_webview2.ps1 has run)
+  * Mermaid (mermaid.min.js) ......... MIT
+  * KaTeX (katex.min.js, katex.min.css, fonts)
+                                       MIT
+  * highlight.js (highlight.min.js, themes)
+                                       BSD-3-Clause
+
+Each vendored package directory contains its upstream LICENSE file, and
+third_party/vendor/VERSIONS.json records the exact version that was vendored.
+
+The editor front-end under web/ is part of this repository and is covered by the
+same terms as the rest of the source.

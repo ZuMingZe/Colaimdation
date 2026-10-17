@@ -1,0 +1,9 @@
+// Resource script for the editor executables.
+//
+// Compiles the multi-size icon (regenerate it from the artwork with
+// `python tools/make_icon.py`) into the binary, so Explorer, the taskbar and
+// Alt+Tab show it. The same resource is loaded at runtime for the window class -
+// see win_util.cpp.
+#include "app_icon.h"
+
+IDI_COLAIMDATION ICON "colaimdation.ico"
